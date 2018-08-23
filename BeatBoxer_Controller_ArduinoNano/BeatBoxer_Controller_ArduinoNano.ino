@@ -26,7 +26,14 @@
 #include <platforms.h>
 #include <power_mgt.h>
 
-// Punch Glove 
+/* 
+ *  
+ *  BeatBoxer - Punch Mitt Arduino Code
+ *  
+ *  Ben Tandy
+ *  21/08/2018
+ *  
+ */
 
 #define NUM_STREAM_LEDS 40 
 #define DATA_PIN 6 
@@ -116,12 +123,16 @@ void loop() {
     }
   }
 
+  // If a message has been received via Serial from the Raspberry Pi
   if (Serial.available() > 0) {
     incomingByte = Serial.read();
+    // 'a' received - go to Title Screen
     if (incomingByte == 97) {
       gameState = 0;
+    // 'b' received - go to Game Screen
     } else if (incomingByte == 98) {
       gameState = 1;
+    // 'c' recieved - send Trail up the arm
     } else if (incomingByte == 99) {
       streamLEDValues[39] = 1;
       renderLights();
@@ -132,6 +143,7 @@ void loop() {
 
 void punchExpected(int offset = 0)
 {
+  // Set when the punch is expected
   punchExpectedTime = millis() + offset;
 }
 
@@ -157,7 +169,7 @@ void movePulse()
 
 void processPunch()
 {
-
+  // After half a second, shrink the spread of LEDS lit across the mitt after a punch
   if (millis() - punchDeliveredTime > 500) {
     for (int i = 0; i < 10; i++)
     {
@@ -173,31 +185,35 @@ void processPunch()
 
 void punchDelivered()
 {
+  // If the game is in play
   if (gameState > 0) {
+    // Calculate the difference between when the game expected the 
+    // punch and when it was delivered by the player
     int difference = -1;
     punchDeliveredTime = millis();
     difference = abs(punchDeliveredTime - punchExpectedTime);
     if (difference >= 0) {
       lastPunchValue = 20 / 120 * (120 - difference);
       lastPunchColor = 0;
-      if (difference < 20) {
+      if (difference < 20) { // BEST
         Serial.print("1");
         lastPunchColor = 1;
-      } else if (difference < 60) {
+      } else if (difference < 60) { // GOOD
         Serial.print("2");
         lastPunchColor = 2;
-      } else if (difference < 120) {
+      } else if (difference < 120) { // OK
         Serial.print("3");
         lastPunchColor = 3;
-      } else if (difference < 500) {
+      } else if (difference < 500) { // BAD
         Serial.print("4");
         lastPunchColor = 4;
-      } else {
+      } else { // MISS
         Serial.print("5");
         lastPunchColor = 5;
       }
     }
   } else {
+    // If the game is in the Menu, only show White as the punch colour
     lastPunchColor = 6;
     Serial.print("*");
   }
@@ -205,13 +221,16 @@ void punchDelivered()
 
 void punchProcessed(int power)
 {
+  // If the lastPunchColor isn't Black
   if (lastPunchColor > 0) {
     if (lastPunchColor == 5) {
+      // If a Miss, don't fill the entire top of the Mitt LEDs
       for (int i = 5; i < 15; i++)
       {
         streamLEDValues[i] = lastPunchColor;
       }
     } else {
+      // Fill the entire top of the Mitt LEDs with the lastPunchColor
       for (int i = 0; i < 20; i++)
       {
         streamLEDValues[i] = lastPunchColor;
@@ -222,6 +241,7 @@ void punchProcessed(int power)
 
 void renderLights()
 {
+  // Set the colours of the trail below the mitt
   for (int i = 20; i < 40; i++)
   {
     if (streamLEDValues[i] > 0) {
@@ -247,6 +267,8 @@ void renderLights()
       streamLEDS[i] = CRGB(currLED.r / 2, currLED.b / 2, currLED.b / 2);
     }
   }
+  // Set the colours of the LEDs placed over the top of the mitt which 
+  // shows the response from the game
   for (int i = 0; i < 20; i++)
   {
     if (streamLEDValues[i] > 0) {
